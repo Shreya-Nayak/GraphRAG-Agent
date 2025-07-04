@@ -211,3 +211,77 @@ class IntegratedGraphRAG:
         if self.qdrant_vector:
             self.qdrant_vector.close()
         print("✅ All connections closed")
+
+    def has_existing_data(self) -> Dict[str, bool]:
+        """Check if the system already has data to avoid duplicates"""
+        status = {
+            'neo4j_has_data': False,
+            'qdrant_has_data': False,
+            'total_chunks': 0,
+            'total_points': 0
+        }
+        
+        try:
+            # Check Neo4j for existing chunks
+            with self.neo4j_graph.driver.session() as session:
+                result = session.run("MATCH (c:Chunk) RETURN count(c) as chunk_count")
+                record = result.single()
+                chunk_count = record['chunk_count'] if record else 0
+                status['neo4j_has_data'] = chunk_count > 0
+                status['total_chunks'] = chunk_count
+        except Exception as e:
+            logger.warning(f"Could not check Neo4j data: {e}")
+        
+        try:
+            # Check Qdrant for existing points
+            collection_info = self.qdrant_vector.get_collection_info()
+            if collection_info:
+                points_count = collection_info.points_count or 0
+                status['qdrant_has_data'] = points_count > 0
+                status['total_points'] = points_count
+        except Exception as e:
+            logger.warning(f"Could not check Qdrant data: {e}")
+        
+        return status
+
+    def ingest_chunks(self, chunks: List[Dict]):
+        """Intelligently ingest chunks, avoiding duplicates"""
+        if not chunks:
+            logger.info("No chunks to ingest")
+            return
+        
+        logger.info(f"Ingesting {len(chunks)} chunks into knowledge graph")
+        
+        # Check for existing data
+        existing_data = self.has_existing_data()
+        
+        if existing_data['neo4j_has_data'] or existing_data['qdrant_has_data']:
+            logger.info(f"Existing data found - Neo4j: {existing_data['total_chunks']} chunks, "
+                       f"Qdrant: {existing_data['total_points']} points")
+            logger.info("Performing incremental update...")
+        else:
+            logger.info("No existing data found - performing initial ingestion")
+        
+        try:
+            # Generate embeddings for chunks that don't have them
+            chunks_to_embed = [chunk for chunk in chunks if 'embedding' not in chunk]
+            if chunks_to_embed:
+                logger.info(f"Generating embeddings for {len(chunks_to_embed)} chunks")
+                for i, chunk in enumerate(chunks_to_embed):
+                    try:
+                        from embedding import get_gemini_embedding, dummy_embedding
+                        import asyncio
+                        chunk["embedding"] = asyncio.run(get_gemini_embedding(chunk["text"]))
+                    except Exception as e:
+                        logger.warning(f"Embedding failed for chunk {i+1}, using fallback: {e}")
+                        chunk["embedding"] = dummy_embedding(chunk["text"])
+            
+            # Store in Neo4j (handles duplicates internally)
+            self.create_chunk_nodes(chunks)
+            self.link_chunks(chunks)
+            
+            logger.info(f"✅ Successfully ingested {len(chunks)} chunks")
+            
+        except Exception as e:
+            logger.error(f"Failed to ingest chunks: {e}")
+            raise

@@ -239,6 +239,45 @@ documents/
 
 The system will automatically process them when it starts.
 
+## 🔧 Smart Document Processing
+
+The system includes **intelligent document change detection** to avoid unnecessary reprocessing:
+
+### ✅ **Automatic Change Detection**
+- **File Hash Tracking**: Detects when documents are actually modified
+- **Incremental Updates**: Only processes new or changed documents  
+- **Cache Management**: Stores metadata to avoid redundant API calls
+- **Fast Startup**: Skips processing if no changes detected
+
+### 📊 **Document Status Commands**
+
+```bash
+# Check which documents need processing
+python doc_manager.py --check-status
+
+# Force reprocess all documents (clears cache)
+python doc_manager.py --clear-cache
+
+# Run app with force reprocess flag
+python main.py --force-reprocess
+```
+
+### 🚀 **Benefits**
+- **💰 Saves API Costs**: Avoids unnecessary Gemini API calls
+- **⚡ Faster Startup**: Only processes changed documents
+- **🔄 Data Integrity**: Prevents duplicate embeddings/nodes
+- **📈 Scalability**: Efficient handling of large document sets
+
+### 📋 **Document Processing Workflow**
+
+```
+Startup → Check document hashes → Only process changed files → Update cache → Ready!
+```
+
+**First Run**: All documents processed and cached  
+**Subsequent Runs**: Only new/modified documents processed  
+**No Changes**: Instant startup with existing knowledge graph
+
 ## 🛠️ Troubleshooting
 
 ### Common Issues & Solutions

@@ -2,6 +2,7 @@ import os
 from typing import List, Dict, Optional
 from docx import Document
 import tiktoken
+from document_tracker import DocumentTracker
 
 def get_doc_type(filename: str) -> str:
     # Simple heuristic based on filename
@@ -66,14 +67,54 @@ def process_docx_file(filepath: str) -> List[Dict]:
                 })
     return chunks
 
-def ingest_documents(folder: str) -> List[Dict]:
+def ingest_documents(folder: str, force_reprocess: bool = False) -> List[Dict]:
+    """
+    Intelligently ingest documents - only process changed/new files
+    
+    Args:
+        folder: Path to documents folder
+        force_reprocess: If True, reprocess all documents regardless of cache
+    
+    Returns:
+        List of document chunks from new/modified documents only
+    """
+    tracker = DocumentTracker()
+    
+    if force_reprocess:
+        print("🔄 Force reprocessing all documents...")
+        tracker.force_reprocess_all()
+    
+    # Get document change status
+    changes = tracker.get_changed_documents(folder)
+    
+    # Files that need processing
+    files_to_process = changes["new"] + changes["modified"]
+    
+    if not files_to_process:
+        print("✅ No document changes detected - skipping ingestion")
+        print(f"📊 Cache stats: {tracker.get_cache_stats()}")
+        return []
+    
+    print(f"📄 Processing {len(files_to_process)} documents:")
+    print(f"   📝 New: {len(changes['new'])}")
+    print(f"   🔄 Modified: {len(changes['modified'])}")
+    print(f"   ✅ Unchanged: {len(changes['unchanged'])}")
+    
     all_chunks = []
-    for fname in os.listdir(folder):
-        if fname.endswith(".docx"):
-            path = os.path.join(folder, fname)
-            try:
-                chunks = process_docx_file(path)
-                all_chunks.extend(chunks)
-            except Exception as e:
-                print(f"Failed to process {fname}: {e}")
+    processed_files = []
+    
+    for filepath in files_to_process:
+        try:
+            chunks = process_docx_file(filepath)
+            all_chunks.extend(chunks)
+            processed_files.append(os.path.basename(filepath))
+            print(f"✅ Processed {os.path.basename(filepath)}: {len(chunks)} chunks")
+        except Exception as e:
+            print(f"❌ Failed to process {os.path.basename(filepath)}: {e}")
+    
+    # Update cache for successfully processed files
+    if processed_files:
+        tracker.mark_documents_processed(folder, processed_files)
+        print(f"💾 Successfully processed {len(processed_files)} documents")
+    
     return all_chunks

@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -44,6 +45,12 @@ graph_initialized = False
 async def initialize_graph():
     """Initialize the integrated knowledge graph (Neo4j + Qdrant) from documents"""
     global graph_initialized, global_graph
+    
+    # Check for command line arguments
+    force_reprocess = "--force-reprocess" in sys.argv or "--force" in sys.argv
+    if force_reprocess:
+        print("🔄 Force reprocess flag detected - will reprocess all documents")
+    
     try:
         print("📂 Starting document ingestion for Neo4j + Qdrant...")
         
@@ -57,14 +64,27 @@ async def initialize_graph():
             from memory_graph import InMemoryGraphRAG
             global_graph = InMemoryGraphRAG()
         
-        # Ingest and process all documents
-        chunks = ingest_documents(doc_folder)
-        print(f"📄 Found {len(chunks)} document chunks")
+        # Smart document ingestion - only process changed/new documents
+        print("🔍 Checking for document changes...")
+        chunks = ingest_documents(doc_folder, force_reprocess=force_reprocess)
         
-        if not chunks:
-            print("⚠️  No document chunks found. Creating demo chunks for testing.")
+        if chunks:
+            print(f"📄 Processing {len(chunks)} new/modified document chunks")
+            # Store document chunks in the graph
+            print("💾 Storing chunks in knowledge graph...")
+            try:
+                global_graph.ingest_chunks(chunks)
+                print("✅ Successfully updated knowledge graph with new chunks")
+            except Exception as e:
+                print(f"⚠️  Warning: Failed to store some chunks: {e}")
+        else:
+            print("✅ No new document changes - knowledge graph is up to date")
+        
+        # Always ensure we have some data for demo purposes
+        if not hasattr(global_graph, 'get_stats') or global_graph.get_stats().get('total_chunks', 0) == 0:
+            print("⚠️  No document chunks in system. Creating demo chunks for testing.")
             # Create some demo chunks for testing
-            chunks = [
+            demo_chunks = [
                 {
                     "text": "User authentication should validate credentials and return appropriate responses for valid and invalid login attempts.",
                     "file_name": "demo_auth.docx",
@@ -84,24 +104,36 @@ async def initialize_graph():
                     "doc_type": "API_SPEC"
                 }
             ]
+            
+            print("🧠 Generating embeddings for demo chunks...")
+            for i, chunk in enumerate(demo_chunks):
+                try:
+                    print(f"🔄 Processing demo chunk {i+1}/{len(demo_chunks)}: {chunk['file_name']}")
+                    chunk["embedding"] = await get_gemini_embedding(chunk["text"])
+                except Exception as e:
+                    print(f"⚠️  Embedding failed for demo chunk {i+1}, using fallback: {e}")
+                    chunk["embedding"] = dummy_embedding(chunk["text"])
+            
+            print("🔗 Building integrated knowledge graph with demo data...")
+            global_graph.create_chunk_nodes(demo_chunks)
+            global_graph.link_chunks(demo_chunks)
+            print("✅ Demo knowledge graph construction completed")
         
-        # Generate embeddings for all chunks
-        print("🧠 Starting embedding generation...")
-        for i, chunk in enumerate(chunks):
-            try:
-                print(f"🔄 Processing chunk {i+1}/{len(chunks)}: {chunk['file_name']}")
-                chunk["embedding"] = await get_gemini_embedding(chunk["text"])
-            except Exception as e:
-                print(f"⚠️  Embedding failed for chunk {i+1}, using fallback: {e}")
-                chunk["embedding"] = dummy_embedding(chunk["text"])
-        
-        print("✅ Embedding generation completed")
-        
-        # Build integrated knowledge graph (Neo4j + Qdrant)
-        print("🔗 Building integrated knowledge graph...")
-        global_graph.create_chunk_nodes(chunks)
-        global_graph.link_chunks(chunks)
-        print("✅ Integrated knowledge graph construction completed")
+        elif chunks:
+            # Process new/modified chunks only
+            print("🧠 Generating embeddings for new/modified chunks...")
+            for i, chunk in enumerate(chunks):
+                try:
+                    print(f"🔄 Processing chunk {i+1}/{len(chunks)}: {chunk['file_name']}")
+                    chunk["embedding"] = await get_gemini_embedding(chunk["text"])
+                except Exception as e:
+                    print(f"⚠️  Embedding failed for chunk {i+1}, using fallback: {e}")
+                    chunk["embedding"] = dummy_embedding(chunk["text"])
+            
+            print("🔗 Updating integrated knowledge graph...")
+            global_graph.create_chunk_nodes(chunks)
+            global_graph.link_chunks(chunks)
+            print("✅ Knowledge graph update completed")
         
         # Get system statistics
         stats = global_graph.get_system_stats()

@@ -11,6 +11,16 @@ ENV/
 env.bak/
 venv.bak/
 
+# Document processing cache
+document_cache.json
+section_cache.json
+
+# Temporary and log files
+*.log
+*.tmp
+*.temp
+*.cache
+
 # IDE
 .vscode/
 .idea/

@@ -162,16 +162,18 @@ class Neo4jGraphRAG:
     def expand_context(self, chunk_ids: List[int], hops: int = 2) -> List[Dict]:
         """Expand context by following relationships"""
         with self.driver.session() as session:
-            result = session.run("""
+            # Construct query with literal hop value since Neo4j doesn't support parameters in path patterns
+            query = f"""
                 MATCH (start:Chunk)
                 WHERE start.chunk_id IN $chunk_ids
-                MATCH path = (start)-[*1..$hops]-(related:Chunk)
+                MATCH path = (start)-[*1..{hops}]-(related:Chunk)
                 RETURN DISTINCT related.chunk_id as chunk_id,
                        related.text as text,
                        related.file_name as file_name,
                        related.section_title as section_title,
                        related.doc_type as doc_type
-            """, chunk_ids=chunk_ids, hops=hops)
+            """
+            result = session.run(query, chunk_ids=chunk_ids)
             
             chunks = []
             for record in result:
