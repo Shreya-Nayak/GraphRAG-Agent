@@ -1,144 +1,377 @@
 # GraphRAG Test Case Generator
 
-A complete GraphRAG-powered agent using Pydantic AI with Google Gemini API and Neo4j for intelligent test case generation from technical documents.
+🤖 **AI-powered test case generation using GraphRAG architecture** 
 
-## 🚀 Quick Start
+Generate comprehensive test cases from your technical documents using Google Gemini AI, Neo4j knowledge graphs, and Qdrant vector search.
 
-### Backend Setup
+![Architecture](https://img.shields.io/badge/Architecture-GraphRAG-blue) ![AI](https://img.shields.io/badge/AI-Google%20Gemini-orange) ![Database](https://img.shields.io/badge/Graph-Neo4j-green) ![Vector](https://img.shields.io/badge/Vector-Qdrant-purple)
 
-1. **Install Python dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+> **🚀 Quick Setup**: Copy `.env.example` to `.env`, add your API keys, choose Docker or Cloud for Qdrant, and run `python start.py`!
 
-2. **Set up Neo4j Vector Index:**
-   Open Neo4j Browser and run:
-   ```cypher
-   CREATE VECTOR INDEX chunk_embedding_index IF NOT EXISTS
-   FOR (c:Chunk) ON (c.embedding)
-   OPTIONS {indexConfig: {`vector.dimensions`: 256, `vector.similarity_function`: 'cosine'}}
-   ```
+## 🏗️ Architecture Overview
 
-3. **Start the FastAPI backend:**
-   ```bash
-   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-   ```
-
-### Frontend Setup
-
-1. **Navigate to frontend directory:**
-   ```bash
-   cd frontend
-   ```
-
-2. **Install Node.js dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Start the React development server:**
-   ```bash
-   npm start
-   ```
-
-4. **Open your browser to:**
-   ```
-   http://localhost:3000
-   ```
-
-## 📋 Usage
-
-1. **Start both servers** (backend on port 8000, frontend on port 3000)
-2. **Open the React UI** in your browser
-3. **Enter a test query** like:
-   - "Login API should handle invalid credentials"
-   - "User registration flow with validation"
-   - "Payment processing with different card types"
-4. **Click "Generate Test Cases"** to get AI-generated test cases and scripts
-5. **Copy test cases** using the copy button for easy integration
-
-## 🔧 Configuration
-
-### Environment Variables (.env)
 ```
-NEO4J_URI=neo4j+s://ef1f1fe9.databases.neo4j.io
+Documents (.docx) → Knowledge Graph (Neo4j) + Vector Store (Qdrant) → AI Agent (Gemini) → Test Cases
+```
+
+- **📊 Knowledge Graph**: Neo4j Aura DB stores document relationships  
+- **🔍 Vector Database**: Qdrant for fast similarity search on embeddings
+  - **🐳 Option A**: Local Docker (free, easy setup)
+  - **☁️ Option B**: Qdrant Cloud (managed service)
+- **🤖 AI Agent**: Google Gemini 1.5 Flash for intelligent test generation
+- **⚡ Backend**: FastAPI with hybrid search (vector + graph)
+- **🎨 Frontend**: React UI for interactive test case generation
+
+## 🚀 Quick Start (5 minutes)
+
+### Prerequisites ✅
+
+Before you start, make sure you have:
+
+1. **Python 3.8+** - [Download Python](https://python.org/downloads)
+2. **Node.js 16+** - [Download Node.js](https://nodejs.org)
+3. **Docker Desktop** - [Download Docker](https://docker.com/products/docker-desktop)
+4. **Git** - [Download Git](https://git-scm.com)
+
+### Step 1: Clone the Repository
+
+```bash
+git clone <your-repo-url>
+cd "GraphRAG Agent neo4j"
+```
+
+### Step 2: Get Required API Keys
+
+#### 🔑 Google Gemini API Key (FREE)
+1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Click "Create API Key"
+3. Copy the key - you'll need it in Step 4
+
+#### 🔑 Neo4j Aura DB (FREE)
+1. Go to [Neo4j Aura](https://neo4j.com/aura)
+2. Create a free account
+3. Create a new instance (free tier)
+4. Copy the connection details - you'll need them in Step 4
+
+#### 🔑 Qdrant Setup - Choose ONE Option:
+
+**🐳 Option A: Qdrant Docker (Recommended for beginners)**
+- ✅ **Free and local**
+- ✅ **No signup required**
+- ✅ **Works offline**
+- ❌ Requires Docker Desktop
+- **Setup**: Just run `docker-compose up -d qdrant`
+
+**☁️ Option B: Qdrant Cloud (Managed service)**
+- ✅ **No Docker needed**
+- ✅ **Managed and scalable**
+- ✅ **Better for production**
+- ❌ Requires signup
+- **Setup**: 
+  1. Go to [Qdrant Cloud](https://cloud.qdrant.io)
+  2. Create free account
+  3. Create a cluster
+  4. Copy URL and API key
+
+### Step 3: Set Up the Environment
+
+#### Create Python Virtual Environment
+```bash
+# Windows
+python -m venv .venv
+.venv\Scripts\activate
+
+# macOS/Linux
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+#### Install Python Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### Step 4: Configure Environment Variables
+
+Create a `.env` file in the root directory. **Choose ONE Qdrant option:**
+
+#### 🐳 Option A: Using Qdrant Docker (Local)
+
+```env
+# Neo4j Aura DB (paste your values from Step 2)
+NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io
 NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=dLUC9V2MfZpjSHZnw627NE6PXlzwyqEUSy9gKxufbew
+NEO4J_PASSWORD=your-password-from-aura
 NEO4J_DATABASE=neo4j
-GEMINI_API_KEY=AIzaSyAVUMhLloQkzqZVOVyWwFWyoUGndWK-fMA
+
+# Google Gemini API (paste your key from Step 2)
+GEMINI_API_KEY=your-gemini-api-key-here
+
+# Qdrant Docker (Local) - DEFAULT
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+QDRANT_COLLECTION_NAME=document_chunks
 ```
 
-## 📁 Project Structure
+#### ☁️ Option B: Using Qdrant Cloud (Remote)
+
+```env
+# Neo4j Aura DB (paste your values from Step 2)
+NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your-password-from-aura
+NEO4J_DATABASE=neo4j
+
+# Google Gemini API (paste your key from Step 2)
+GEMINI_API_KEY=your-gemini-api-key-here
+
+# Qdrant Cloud (Remote)
+QDRANT_URL=https://your-cluster-url.qdrant.tech
+QDRANT_API_KEY=your-qdrant-api-key-here
+QDRANT_COLLECTION_NAME=document_chunks
+```
+
+> **💡 How it works**: If `QDRANT_URL` is set, the system uses Qdrant Cloud. Otherwise, it uses Docker mode.
+
+### Step 5: Start Qdrant (Skip if using Qdrant Cloud)
+
+**🐳 Only for Docker users:**
+
+```bash
+# Start Qdrant in Docker (make sure Docker Desktop is running)
+docker-compose up -d qdrant
+
+# Verify it's running
+docker ps
+```
+
+**☁️ Cloud users**: Skip this step - your Qdrant is already running in the cloud!
+
+### Step 6: Start the Backend
+
+```bash
+# Run the setup script (installs dependencies and initializes system)
+python setup.py
+
+# Start the FastAPI server
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+**✅ Backend running at:** http://localhost:8000
+
+### Step 7: Start the Frontend
+
+```bash
+# Open a new terminal and navigate to frontend
+cd frontend
+
+# Install Node.js dependencies
+npm install
+
+# Start React development server
+npm start
+```
+
+**✅ Frontend running at:** http://localhost:3000
+
+## 🎯 How to Use
+
+1. **Open your browser** to http://localhost:3000
+2. **Enter a test query** like:
+   - "Login API should handle invalid credentials"
+   - "User registration with email validation"
+   - "Payment processing edge cases"
+3. **Click "Generate Test Cases"**
+4. **Copy the generated test cases** using the copy button
+
+## 📁 Adding Your Documents
+
+Put your `.docx` files in the `documents/` folder:
+```
+documents/
+├── API_Specification.docx
+├── Requirements.docx
+├── Design_Document.docx
+└── your-other-docs.docx
+```
+
+The system will automatically process them when it starts.
+
+## 🛠️ Troubleshooting
+
+### Common Issues & Solutions
+
+#### ❌ "ModuleNotFoundError" 
+**Solution:** Make sure your virtual environment is activated
+```bash
+# Windows
+.venv\Scripts\activate
+
+# macOS/Linux  
+source .venv/bin/activate
+```
+
+#### ❌ "Qdrant connection failed"
+
+**For Docker users:**
+```bash
+# Check if Docker is running
+docker ps
+
+# Start Qdrant if not running
+docker-compose up -d qdrant
+
+# Check Qdrant logs
+docker logs qdrant_graphrag
+```
+
+**For Cloud users:**
+- Check your `QDRANT_URL` and `QDRANT_API_KEY` in `.env` file
+- Verify your Qdrant Cloud cluster is running
+- Test connection at your Qdrant Cloud dashboard
+
+#### ❌ "Neo4j connection failed"
+**Solution:** Check your `.env` file has correct Neo4j credentials
+
+#### ❌ "Frontend can't connect to backend"
+**Solution:** Make sure backend is running on port 8000
+```bash
+# Check if backend is running
+curl http://localhost:8000/health
+```
+
+#### ❌ "No test cases generated"
+**Solution:** 
+1. Check if documents are in `documents/` folder
+2. Verify Gemini API key is valid
+3. Check backend logs for errors
+
+### Getting Help
+
+1. **Check the logs** in your terminal for error messages
+2. **Run the verification script**: `python quick_verify.py`
+3. **Check service status**: 
+   - Backend: http://localhost:8000/docs
+   - Qdrant Docker: http://localhost:6333/dashboard
+   - Qdrant Cloud: Your cloud dashboard URL
+
+## 🔧 Advanced Configuration
+
+### 🤔 Qdrant: Docker vs Cloud - Which to Choose?
+
+| Feature | 🐳 Docker (Local) | ☁️ Cloud (Remote) |
+|---------|-------------------|-------------------|
+| **Cost** | Free | Free tier + paid plans |
+| **Setup** | Requires Docker Desktop | Just signup & API key |
+| **Performance** | Fast (local) | Network dependent |
+| **Scalability** | Limited by your machine | Highly scalable |
+| **Offline** | Works offline | Requires internet |
+| **Maintenance** | You manage | Managed service |
+| **Best for** | Development, testing | Production, collaboration |
+
+**🎯 Recommendation:**
+- **Beginners/Development**: Use Docker mode
+- **Production/Team**: Use Cloud mode
+
+### 🔄 Switching Between Modes
+
+You can easily switch between Docker and Cloud modes:
+
+1. **To switch to Cloud**: Add `QDRANT_URL` and `QDRANT_API_KEY` to `.env`
+2. **To switch to Docker**: Remove/comment out `QDRANT_URL` from `.env`
+3. **Restart** the application
+
+The system automatically detects which mode to use based on your `.env` configuration.
+
+### Optional: Neo4j Vector Index (for better performance)
+
+If you want to use Neo4j's vector search capabilities:
+
+1. Open Neo4j Browser (from your Aura console)
+2. Run this command:
+```cypher
+CREATE VECTOR INDEX chunk_embeddings IF NOT EXISTS
+FOR (c:Chunk) ON (c.embedding)
+OPTIONS {indexConfig: {
+    `vector.dimensions`: 768,
+    `vector.similarity_function`: 'cosine'
+}}
+```
+
+### Environment Variables Reference
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `NEO4J_URI` | Neo4j Aura connection string | Yes | - |
+| `NEO4J_USERNAME` | Neo4j username | Yes | `neo4j` |
+| `NEO4J_PASSWORD` | Neo4j password | Yes | - |
+| `GEMINI_API_KEY` | Google Gemini API key | Yes | - |
+| **Qdrant Docker Mode** | | | |
+| `QDRANT_HOST` | Qdrant host | No | `localhost` |
+| `QDRANT_PORT` | Qdrant port | No | `6333` |
+| **Qdrant Cloud Mode** | | | |
+| `QDRANT_URL` | Qdrant Cloud URL | Cloud only | - |
+| `QDRANT_API_KEY` | Qdrant Cloud API key | Cloud only | - |
+
+## 📚 API Documentation
+
+Once the backend is running, visit:
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+### Main Endpoint
+
+**POST** `/generate-tests`
+```json
+{
+  "query": "Your test scenario description"
+}
+```
+
+## 🏗️ Project Structure
 
 ```
-├── main.py                 # FastAPI server
-├── config.py              # Configuration management
-├── file_ingestion.py      # Document processing
-├── embedding.py           # Gemini embeddings
-├── graph_builder.py       # Neo4j graph operations
-├── agent.py               # Pydantic AI agent
-├── models.py              # Data models
-├── requirements.txt       # Python dependencies
-├── documents/             # .docx files for processing
-└── frontend/              # React UI
+├── 🚀 main.py                     # FastAPI server entry point
+├── ⚙️ config.py                   # Configuration management  
+├── 📄 file_ingestion.py           # Document processing (.docx)
+├── 🔢 embedding.py                # Gemini embeddings
+├── 🕸️ neo4j_graph.py              # Neo4j operations
+├── 🔍 qdrant_vector.py            # Qdrant vector operations
+├── 🔗 integrated_graphrag.py      # Hybrid system (Neo4j + Qdrant)
+├── 🤖 agent.py                    # AI test generation
+├── 📋 models.py                   # Pydantic data models
+├── 💾 memory_graph.py             # Fallback in-memory system
+├── 🐳 docker-compose.yml          # Qdrant Docker setup
+├── 📦 requirements.txt            # Python dependencies
+├── 📁 documents/                  # Your .docx files go here
+└── 🎨 frontend/                   # React UI
     ├── package.json
     ├── public/
     └── src/
-        ├── App.js         # Main React component
-        ├── index.js       # React entry point
-        └── index.css      # Styling
 ```
 
-## 🎯 Features
+## 🚀 Deployment
 
-- **Document Ingestion**: Processes .docx files (PRD, HLD, LLD, API specs)
-- **Knowledge Graph**: Builds relationships between document chunks
-- **Vector Search**: Finds relevant context using embeddings
-- **AI Generation**: Creates structured test cases using Gemini AI
-- **Modern UI**: React-based interface with copy functionality
-- **Error Handling**: Robust error management throughout the pipeline
+### For Production
 
-## 🛠 API Endpoints
+1. **Use environment variables** instead of `.env` file
+2. **Set up proper Neo4j instance** (not free tier)
+3. **Use persistent Qdrant storage**
+4. **Build React for production**: `npm run build`
+5. **Use production WSGI server**: `gunicorn main:app`
 
-### POST /generate-tests
-Generate test cases for a given query.
+## 🤝 Contributing
 
-**Request:**
-```json
-{
-  "query": "Login API should handle invalid credentials"
-}
-```
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if needed
+5. Submit a pull request
 
-**Response:**
-```json
-{
-  "query": "Login API should handle invalid credentials",
-  "test_cases": [
-    {
-      "title": "Test invalid username",
-      "steps": [
-        "Navigate to login page",
-        "Enter invalid username",
-        "Enter valid password",
-        "Click login button"
-      ],
-      "expected_result": "Should display 'Invalid credentials' error message"
-    }
-  ]
-}
-```
+## � License
 
-## 🚨 Troubleshooting
+This project is licensed under the MIT License.
 
-1. **Backend fails to start**: Check Neo4j connection and ensure vector index is created
-2. **Frontend can't connect**: Ensure backend is running on port 8000
-3. **No test cases generated**: Check if documents are in the `documents/` folder
-4. **Embedding errors**: Verify Gemini API key is valid and enabled
+---
 
-## 📚 Tech Stack
-
-- **Backend**: FastAPI, Neo4j, Google Gemini API, Pydantic AI
-- **Frontend**: React, Axios
-- **Database**: Neo4j with vector indexing
-- **AI**: Google Gemini for embeddings and text generation
+**🎉 Happy Testing!** If you run into any issues, please create an issue on GitHub.

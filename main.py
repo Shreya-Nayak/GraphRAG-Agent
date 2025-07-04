@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from file_ingestion import ingest_documents
 from embedding import get_gemini_embedding, dummy_embedding
-from memory_graph import InMemoryGraphRAG  # Use in-memory vector storage
+from integrated_graphrag import IntegratedGraphRAG  # Use Neo4j + Qdrant
 from agent import generate_test_suite
 
 @asynccontextmanager
@@ -16,12 +16,13 @@ async def lifespan(app: FastAPI):
     # Start graph initialization in background without blocking server startup
     asyncio.create_task(initialize_graph())
     yield
-    # Shutdown (if needed)
-    pass
+    # Shutdown
+    if global_graph:
+        global_graph.close()
 
 app = FastAPI(
     title="GraphRAG Test Generator", 
-    description="AI-powered test case generation using in-memory knowledge graphs",
+    description="AI-powered test case generation using Neo4j Aura DB and Qdrant vector database",
     lifespan=lifespan
 )
 
@@ -36,15 +37,25 @@ app.add_middleware(
 
 doc_folder = "documents"
 
-# Global in-memory graph instance
-global_graph = InMemoryGraphRAG()
+# Global integrated graph instance (Neo4j + Qdrant)
+global_graph = None
 graph_initialized = False
 
 async def initialize_graph():
-    """Initialize the in-memory knowledge graph from documents"""
-    global graph_initialized
+    """Initialize the integrated knowledge graph (Neo4j + Qdrant) from documents"""
+    global graph_initialized, global_graph
     try:
-        print("📂 Starting document ingestion from in-memory knowledge graph...")
+        print("📂 Starting document ingestion for Neo4j + Qdrant...")
+        
+        # Initialize the integrated system
+        try:
+            global_graph = IntegratedGraphRAG()
+            print("✅ Connected to Neo4j Aura DB + Qdrant Docker")
+        except Exception as db_error:
+            print(f"⚠️  External DB connection failed: {db_error}")
+            print("🔄 Falling back to in-memory system...")
+            from memory_graph import InMemoryGraphRAG
+            global_graph = InMemoryGraphRAG()
         
         # Ingest and process all documents
         chunks = ingest_documents(doc_folder)
@@ -86,18 +97,47 @@ async def initialize_graph():
         
         print("✅ Embedding generation completed")
         
-        # Build in-memory knowledge graph
-        print("🔗 Building in-memory knowledge graph...")
+        # Build integrated knowledge graph (Neo4j + Qdrant)
+        print("🔗 Building integrated knowledge graph...")
         global_graph.create_chunk_nodes(chunks)
         global_graph.link_chunks(chunks)
-        print("✅ In-memory knowledge graph construction completed")
+        print("✅ Integrated knowledge graph construction completed")
+        
+        # Get system statistics
+        stats = global_graph.get_system_stats()
+        print(f"📊 System Stats: {stats}")
         
         graph_initialized = True
-        print("🎉 GraphRAG system ready!")
+        print("🎉 GraphRAG system ready with Neo4j Aura DB + Qdrant!")
         
     except Exception as e:
         print(f"❌ Error in initialize_graph: {e}")
         import traceback
+        traceback.print_exc()
+        
+        # Fallback to previous system if initialization fails
+        print("🔄 Falling back to in-memory system...")
+        try:
+            from memory_graph import InMemoryGraphRAG
+            global_graph = InMemoryGraphRAG()
+            
+            # Process chunks with in-memory system
+            chunks = ingest_documents(doc_folder)
+            if chunks:
+                for chunk in chunks[:10]:  # Limit for fallback
+                    try:
+                        chunk["embedding"] = await get_gemini_embedding(chunk["text"])
+                    except:
+                        chunk["embedding"] = dummy_embedding(chunk["text"])
+                
+                global_graph.create_chunk_nodes(chunks)
+                global_graph.link_chunks(chunks)
+                graph_initialized = True
+                print("✅ Fallback in-memory system ready")
+            
+        except Exception as fallback_error:
+            print(f"❌ Fallback also failed: {fallback_error}")
+            global_graph = None
         traceback.print_exc()
 
 # Remove the old startup event handler since we're using lifespan now
@@ -113,13 +153,30 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    collection_info = global_graph.get_collection_info() if graph_initialized else {}
-    return {
-        "status": "healthy", 
-        "message": "GraphRAG API is running with in-memory knowledge graph",
+    """Health check endpoint with detailed system status"""
+    status = {
+        "status": "healthy" if graph_initialized else "initializing",
         "graph_initialized": graph_initialized,
-        "qdrant_info": collection_info
+        "system_type": "Neo4j + Qdrant" if global_graph and hasattr(global_graph, 'neo4j_graph') else "In-Memory",
+        "message": "GraphRAG API running with integrated Neo4j Aura DB + Qdrant vector database",
+        "timestamp": "2025-01-04T00:00:00Z"
     }
+    
+    if global_graph and hasattr(global_graph, 'get_system_stats'):
+        try:
+            stats = global_graph.get_system_stats()
+            status.update(stats)
+        except Exception as e:
+            status["stats_error"] = str(e)
+    elif global_graph and hasattr(global_graph, 'get_collection_info'):
+        # Fallback for in-memory system
+        try:
+            collection_info = global_graph.get_collection_info()
+            status["fallback_info"] = collection_info
+        except:
+            pass
+    
+    return status
 
 class QueryRequest(BaseModel):
     query: str
