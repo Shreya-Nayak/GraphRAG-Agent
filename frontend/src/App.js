@@ -7,6 +7,7 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [copiedStates, setCopiedStates] = useState({});
+  const [exportingXray, setExportingXray] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,6 +47,62 @@ const App = () => {
       }, 2000);
     } catch (err) {
       console.error('Failed to copy text: ', err);
+    }
+  };
+
+  const exportToXray = async () => {
+    if (!results?.test_cases?.length) {
+      setError('No test cases to export');
+      return;
+    }
+
+    setExportingXray(true);
+    try {
+      // Format test cases for Jira Xray export
+      const xrayFormat = {
+        info: {
+          summary: `Test Cases for: ${results.query}`,
+          description: `Generated test cases using GraphRAG Agent`,
+          version: "1.0",
+          user: "graphrag-agent",
+          revision: "1",
+          startDate: new Date().toISOString().split('T')[0],
+          finishDate: new Date().toISOString().split('T')[0],
+          testEnvironments: ["Development"]
+        },
+        tests: results.test_cases.map((testCase, index) => ({
+          testKey: `TC-${index + 1}`,
+          testType: "Manual",
+          summary: testCase.title || `Test Case ${index + 1}`,
+          description: testCase.description || '',
+          steps: testCase.steps?.map((step, stepIndex) => ({
+            action: step.action || step,
+            data: step.data || "",
+            result: step.expected_result || step.result || ""
+          })) || [],
+          preconditions: testCase.preconditions || "",
+          priority: testCase.priority || "Medium"
+        }))
+      };
+
+      // Create and download JSON file
+      const dataStr = JSON.stringify(xrayFormat, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      
+      const exportFileDefaultName = `xray-test-cases-${new Date().toISOString().split('T')[0]}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+      
+      // Show success message
+      setError(null);
+      
+    } catch (err) {
+      setError('Failed to export test cases: ' + err.message);
+    } finally {
+      setExportingXray(false);
     }
   };
 
