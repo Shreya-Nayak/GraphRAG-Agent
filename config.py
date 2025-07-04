@@ -1,7 +1,8 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# Force reload environment variables (important for switching configurations)
+load_dotenv(override=True)
 
 # Gemini API configuration
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -25,8 +26,21 @@ QDRANT_COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "document_chunks")
 # Determine Qdrant mode
 QDRANT_MODE = "cloud" if QDRANT_URL else "docker"
 
-# Assertions
-assert GEMINI_API_KEY, "Missing GEMINI_API_KEY environment variable!"
+# Debug: Print what we're loading (helpful for troubleshooting)
+print(f"🔍 Debug - Loading configuration from .env:")
+print(f"   GEMINI_API_KEY found: {'Yes' if GEMINI_API_KEY else 'No'}")
+if GEMINI_API_KEY:
+    print(f"   GEMINI_API_KEY preview: {GEMINI_API_KEY[:10]}...")
+print(f"   NEO4J_URI: {NEO4J_URI}")
+print(f"   QDRANT_URL: {QDRANT_URL}")
+
+# Assertions with better error messages
+if not GEMINI_API_KEY:
+    print("❌ GEMINI_API_KEY not found in environment!")
+    print("💡 Make sure your .env file has:")
+    print("   GEMINI_API_KEY=your-actual-api-key")
+    print("💡 Check that .env file exists in the same directory as main.py")
+    raise AssertionError("Missing GEMINI_API_KEY environment variable!")
 
 # Neo4j is optional - system will fallback to in-memory if not available
 print(f"📋 Configuration loaded:")

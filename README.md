@@ -272,8 +272,50 @@ docker logs qdrant_graphrag
 - Verify your Qdrant Cloud cluster is running
 - Test connection at your Qdrant Cloud dashboard
 
-#### ❌ "Neo4j connection failed"
-**Solution:** Check your `.env` file has correct Neo4j credentials
+#### ❌ "Missing GEMINI_API_KEY environment variable!"
+
+**This is the most common setup issue. Here's how to fix it:**
+
+1. **Check if .env file exists:**
+   ```bash
+   # Make sure you're in the project directory
+   ls .env
+   # or on Windows
+   dir .env
+   ```
+
+2. **If .env doesn't exist, copy from template:**
+   ```bash
+   cp .env.example .env
+   # or on Windows
+   copy .env.example .env
+   ```
+
+3. **Open .env and make sure GEMINI_API_KEY line is NOT commented:**
+   ```env
+   # ❌ Wrong (commented out)
+   # GEMINI_API_KEY=your-gemini-api-key-here
+   
+   # ✅ Correct (not commented)
+   GEMINI_API_KEY=your-actual-api-key-here
+   ```
+
+4. **Run our debug script:**
+   ```bash
+   python debug_env.py
+   ```
+
+5. **If still not working, set environment variable manually:**
+   ```bash
+   # Linux/macOS
+   export GEMINI_API_KEY=your-actual-api-key
+   
+   # Windows PowerShell
+   $env:GEMINI_API_KEY="your-actual-api-key"
+   
+   # Windows Command Prompt
+   set GEMINI_API_KEY=your-actual-api-key
+   ```
 
 #### ❌ "Frontend can't connect to backend"
 **Solution:** Make sure backend is running on port 8000
