@@ -1,0 +1,9 @@
+pydantic
+fastapi
+uvicorn
+python-docx
+httpx
+python-dotenv
+tiktoken
+numpy
+scikit-learn
