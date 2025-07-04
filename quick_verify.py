@@ -77,15 +77,12 @@ def check_qdrant():
         
         if QDRANT_MODE == "cloud":
             print(f"🌐 Qdrant Cloud mode: {QDRANT_URL}")
-            print("✅ Qdrant Cloud configuration found")
-            # Try to import qdrant client to verify it can connect
-            try:
-                from qdrant_vector import QdrantVectorStore
-                print("✅ Qdrant client can be imported")
+            if QDRANT_URL and "your-cluster-url" not in QDRANT_URL:
+                print("✅ Qdrant Cloud URL configured")
                 return True
-            except Exception as e:
-                print(f"❌ Qdrant Cloud connection test failed: {e}")
-                print("💡 Check your QDRANT_URL and QDRANT_API_KEY in .env")
+            else:
+                print("❌ Please update QDRANT_URL with your actual cluster URL")
+                print("💡 Get it from: https://cloud.qdrant.io")
                 return False
         else:
             print(f"🐳 Qdrant Docker mode: {QDRANT_HOST}:{QDRANT_PORT}")
@@ -119,12 +116,24 @@ def check_qdrant():
 def check_config():
     """Test configuration loading"""
     try:
-        from config import GEMINI_API_KEY, QDRANT_MODE, QDRANT_URL, QDRANT_HOST, QDRANT_PORT
+        from config import GEMINI_API_KEY, QDRANT_MODE, QDRANT_URL, QDRANT_HOST, QDRANT_PORT, NEO4J_MODE, NEO4J_URI
         print("✅ Configuration loaded successfully")
+        
+        # Neo4j status
+        if NEO4J_URI:
+            if NEO4J_MODE == "aura":
+                print(f"   Neo4j: ☁️ Aura mode ({NEO4J_URI})")
+            else:
+                print(f"   Neo4j: 🖥️ Desktop mode ({NEO4J_URI})")
+        else:
+            print(f"   Neo4j: ❌ Not configured (will use in-memory)")
+            
+        # Qdrant status
         if QDRANT_MODE == "cloud":
             print(f"   Qdrant: ☁️ Cloud mode ({QDRANT_URL})")
         else:
             print(f"   Qdrant: 🐳 Docker mode ({QDRANT_HOST}:{QDRANT_PORT})")
+            
         print(f"   Gemini API: {'✅ Set' if GEMINI_API_KEY else '❌ Missing'}")
         return bool(GEMINI_API_KEY)
     except Exception as e:

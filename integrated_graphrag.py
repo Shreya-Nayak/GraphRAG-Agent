@@ -1,11 +1,11 @@
 """
-Integrated GraphRAG system using Neo4j Aura DB for knowledge graph and Qdrant for vector storage
-Supports both Qdrant Docker (local) and Qdrant Cloud (remote) modes
+Integrated GraphRAG system using Neo4j for knowledge graph and Qdrant for vector storage
+Supports both Neo4j Desktop/Aura and Qdrant Docker/Cloud modes
 """
 from typing import List, Dict, Optional
 from neo4j_graph import Neo4jGraphRAG
 from qdrant_vector import QdrantVectorStore
-from config import QDRANT_MODE
+from config import QDRANT_MODE, NEO4J_MODE
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,10 +19,18 @@ class IntegratedGraphRAG:
         # Try to initialize Neo4j
         try:
             self.neo4j_graph = Neo4jGraphRAG()
-            print("✅ Neo4j Aura DB connected")
+            if NEO4J_MODE == "aura":
+                print("✅ Neo4j Aura DB connected")
+            else:
+                print("✅ Neo4j Desktop connected")
         except Exception as e:
-            print(f"⚠️  Neo4j connection failed: {e}")
-            print("📝 Neo4j features will be disabled")
+            if NEO4J_MODE == "aura":
+                print(f"⚠️  Neo4j Aura connection failed: {e}")
+                print("📝 Check your Aura credentials in .env file")
+            else:
+                print(f"⚠️  Neo4j Desktop connection failed: {e}")
+                print("📝 Make sure Neo4j Desktop is running")
+            print("📝 Neo4j features will be disabled, using in-memory fallback")
         
         # Try to initialize Qdrant
         try:

@@ -14,10 +14,12 @@ Generate comprehensive test cases from your technical documents using Google Gem
 Documents (.docx) → Knowledge Graph (Neo4j) + Vector Store (Qdrant) → AI Agent (Gemini) → Test Cases
 ```
 
-- **📊 Knowledge Graph**: Neo4j Aura DB stores document relationships  
+- **📊 Knowledge Graph**: Neo4j for storing document relationships  
+  - **🖥️ Option A**: Neo4j Desktop (local, free, easy setup)
+  - **☁️ Option B**: Neo4j Aura (managed cloud service)
 - **🔍 Vector Database**: Qdrant for fast similarity search on embeddings
-  - **🐳 Option A**: Local Docker (free, easy setup)
-  - **☁️ Option B**: Qdrant Cloud (managed service)
+  - **☁️ Option A**: Qdrant Cloud (managed service, no setup)
+  - **🐳 Option B**: Qdrant Docker (local, requires Docker)
 - **🤖 AI Agent**: Google Gemini 1.5 Flash for intelligent test generation
 - **⚡ Backend**: FastAPI with hybrid search (vector + graph)
 - **🎨 Frontend**: React UI for interactive test case generation
@@ -30,8 +32,9 @@ Before you start, make sure you have:
 
 1. **Python 3.8+** - [Download Python](https://python.org/downloads)
 2. **Node.js 16+** - [Download Node.js](https://nodejs.org)
-3. **Docker Desktop** - [Download Docker](https://docker.com/products/docker-desktop)
-4. **Git** - [Download Git](https://git-scm.com)
+3. **Neo4j Desktop** - [Download Neo4j Desktop](https://neo4j.com/download/) OR Neo4j Aura account
+4. **Qdrant Cloud account** - [Sign up at Qdrant Cloud](https://cloud.qdrant.io) OR Docker Desktop
+5. **Git** - [Download Git](https://git-scm.com)
 
 ### Step 1: Clone the Repository
 
@@ -47,31 +50,49 @@ cd "GraphRAG Agent neo4j"
 2. Click "Create API Key"
 3. Copy the key - you'll need it in Step 4
 
-#### 🔑 Neo4j Aura DB (FREE)
-1. Go to [Neo4j Aura](https://neo4j.com/aura)
-2. Create a free account
-3. Create a new instance (free tier)
-4. Copy the connection details - you'll need them in Step 4
+#### 🔑 Neo4j Setup - Choose ONE Option:
 
-#### 🔑 Qdrant Setup - Choose ONE Option:
-
-**🐳 Option A: Qdrant Docker (Recommended for beginners)**
+**🖥️ Option A: Neo4j Desktop (Recommended for beginners)**
 - ✅ **Free and local**
 - ✅ **No signup required**
 - ✅ **Works offline**
-- ❌ Requires Docker Desktop
-- **Setup**: Just run `docker-compose up -d qdrant`
+- ✅ **Easy visual interface**
+- **Setup**: 
+  1. Download and install [Neo4j Desktop](https://neo4j.com/download/)
+  2. Create a new project and database
+  3. Set a password (remember it for .env)
+  4. Start the database
 
-**☁️ Option B: Qdrant Cloud (Managed service)**
-- ✅ **No Docker needed**
+**☁️ Option B: Neo4j Aura (Managed cloud service)**
+- ✅ **No installation needed**
 - ✅ **Managed and scalable**
 - ✅ **Better for production**
 - ❌ Requires signup
+- **Setup**: 
+  1. Go to [Neo4j Aura](https://neo4j.com/aura)
+  2. Create free account
+  3. Create a new instance (free tier)
+  4. Copy connection details
+
+#### 🔑 Qdrant Setup - Choose ONE Option:
+
+**☁️ Option A: Qdrant Cloud (Recommended - Default setup)**
+- ✅ **No installation needed**
+- ✅ **Managed and scalable**
+- ✅ **Free tier available**
+- ✅ **Better performance**
 - **Setup**: 
   1. Go to [Qdrant Cloud](https://cloud.qdrant.io)
   2. Create free account
   3. Create a cluster
   4. Copy URL and API key
+
+**🐳 Option B: Qdrant Docker (Local alternative)**
+- ✅ **Free and local**
+- ✅ **No signup required**
+- ✅ **Works offline**
+- ❌ Requires Docker Desktop
+- **Setup**: Just run `docker-compose up -d qdrant`
 
 ### Step 3: Set Up the Environment
 
@@ -93,30 +114,30 @@ pip install -r requirements.txt
 
 ### Step 4: Configure Environment Variables
 
-Create a `.env` file in the root directory. **Choose ONE Qdrant option:**
+Create a `.env` file in the root directory. **Choose your preferred combination:**
 
-#### 🐳 Option A: Using Qdrant Docker (Local)
+#### 🎯 Recommended Setup (Neo4j Desktop + Qdrant Cloud)
 
 ```env
-# Neo4j Aura DB (paste your values from Step 2)
-NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io
+# Neo4j Desktop (Local)
+NEO4J_URI=bolt://localhost:7687
 NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=your-password-from-aura
+NEO4J_PASSWORD=your-desktop-password
 NEO4J_DATABASE=neo4j
 
 # Google Gemini API (paste your key from Step 2)
 GEMINI_API_KEY=your-gemini-api-key-here
 
-# Qdrant Docker (Local) - DEFAULT
-QDRANT_HOST=localhost
-QDRANT_PORT=6333
+# Qdrant Cloud (Remote) - DEFAULT
+QDRANT_URL=https://your-cluster-url.qdrant.tech
+QDRANT_API_KEY=your-qdrant-api-key-here
 QDRANT_COLLECTION_NAME=document_chunks
 ```
 
-#### ☁️ Option B: Using Qdrant Cloud (Remote)
+#### 🌐 Alternative: Full Cloud Setup (Neo4j Aura + Qdrant Cloud)
 
 ```env
-# Neo4j Aura DB (paste your values from Step 2)
+# Neo4j Aura (Cloud)
 NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=your-password-from-aura
@@ -131,12 +152,33 @@ QDRANT_API_KEY=your-qdrant-api-key-here
 QDRANT_COLLECTION_NAME=document_chunks
 ```
 
-> **💡 How it works**: If `QDRANT_URL` is set, the system uses Qdrant Cloud. Otherwise, it uses Docker mode.
+#### 🐳 Alternative: Full Local Setup (Neo4j Desktop + Qdrant Docker)
 
-### Step 5: Start Qdrant (Skip if using Qdrant Cloud)
+```env
+# Neo4j Desktop (Local)
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your-desktop-password
+NEO4J_DATABASE=neo4j
 
-**🐳 Only for Docker users:**
+# Google Gemini API (paste your key from Step 2)
+GEMINI_API_KEY=your-gemini-api-key-here
 
+# Qdrant Docker (Local)
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+QDRANT_COLLECTION_NAME=document_chunks
+```
+
+> **💡 How it works**: 
+> - Neo4j: Desktop uses `bolt://`, Aura uses `neo4j+s://`
+> - Qdrant: If `QDRANT_URL` is set, uses Cloud mode. Otherwise uses Docker mode.
+
+### Step 5: Start Your Services (If using local options)
+
+**🖥️ Neo4j Desktop users**: Make sure your database is started in Neo4j Desktop
+
+**🐳 Qdrant Docker users**: 
 ```bash
 # Start Qdrant in Docker (make sure Docker Desktop is running)
 docker-compose up -d qdrant
@@ -145,7 +187,7 @@ docker-compose up -d qdrant
 docker ps
 ```
 
-**☁️ Cloud users**: Skip this step - your Qdrant is already running in the cloud!
+**☁️ Cloud users**: Skip this step - your services are already running in the cloud!
 
 ### Step 6: Start the Backend
 

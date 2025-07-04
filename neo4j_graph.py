@@ -1,16 +1,17 @@
 """
-Neo4j Aura DB graph operations for knowledge graph storage
+Neo4j graph operations for knowledge graph storage
+Supports both Desktop (local) and Aura (cloud) connections
 """
 from neo4j import GraphDatabase
 from typing import List, Dict, Optional
 import logging
-from config import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, NEO4J_DATABASE
+from config import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, NEO4J_DATABASE, NEO4J_MODE
 
 logger = logging.getLogger(__name__)
 
 class Neo4jGraphRAG:
     def __init__(self):
-        """Initialize Neo4j connection"""
+        """Initialize Neo4j connection - supports both Desktop and Aura"""
         try:
             self.driver = GraphDatabase.driver(
                 NEO4J_URI,
@@ -19,14 +20,23 @@ class Neo4jGraphRAG:
             )
             # Test connection
             self.driver.verify_connectivity()
-            print("✅ Connected to Neo4j Aura DB successfully")
+            
+            if NEO4J_MODE == "aura":
+                print("✅ Connected to Neo4j Aura DB successfully")
+            else:
+                print("✅ Connected to Neo4j Desktop successfully")
             
             # Create constraints and indexes
             self._create_constraints()
             self._create_vector_index()
             
         except Exception as e:
-            logger.error(f"Failed to connect to Neo4j: {e}")
+            if NEO4J_MODE == "aura":
+                logger.error(f"Failed to connect to Neo4j Aura: {e}")
+                logger.error("Check your NEO4J_URI, NEO4J_USERNAME, and NEO4J_PASSWORD")
+            else:
+                logger.error(f"Failed to connect to Neo4j Desktop: {e}")
+                logger.error("Make sure Neo4j Desktop is running and credentials are correct")
             raise
 
     def _create_constraints(self):
